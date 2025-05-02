@@ -1123,6 +1123,7 @@ else:
 cnhubert.cnhubert_base_path = cnhubert_base_path
 tokenizer = AutoTokenizer.from_pretrained(bert_path)
 bert_model = AutoModelForMaskedLM.from_pretrained(bert_path)
+
 ssl_model = cnhubert.get_model()
 if is_half:
     bert_model = bert_model.half().to(device)
@@ -1136,9 +1137,12 @@ change_gpt_sovits_weights(gpt_path=gpt_path, sovits_path=sovits_path)
 # --------------------------------
 # 接口部分
 # --------------------------------
-app = FastAPI()
 
 
+from fastapi import APIRouter, Request, Query
+from fastapi.responses import StreamingResponse, JSONResponse
+
+app = APIRouter()
 @app.post("/set_model")
 async def set_model(request: Request):
     json_post_raw = await request.json()
@@ -1232,5 +1236,3 @@ async def tts_endpoint(
     )
 
 
-if __name__ == "__main__":
-    uvicorn.run(app, host=host, port=port, workers=1)

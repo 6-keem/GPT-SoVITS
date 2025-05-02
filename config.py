@@ -4,8 +4,8 @@ import os
 import torch
 
 # 推理用的指定模型
-sovits_path = ""
-gpt_path = ""
+sovits_path = "GPT_SoVITS/pretrained_models/s2Gv3.pth"
+gpt_path = "GPT_SoVITS/pretrained_models/s1v3.ckpt"
 is_half_str = os.environ.get("is_half", "True")
 is_half = True if is_half_str.lower() == "true" else False
 is_share_str = os.environ.get("is_share", "False")
