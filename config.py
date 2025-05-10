@@ -4,8 +4,19 @@ import os
 import torch
 
 # 推理用的指定模型
+
+#V3
 sovits_path = "GPT_SoVITS/pretrained_models/s2Gv3.pth"
 gpt_path = "GPT_SoVITS/pretrained_models/s1v3.ckpt"
+
+#v2
+#sovits_path = "GPT_SoVITS/pretrained_models/gsv-v2final-pretrained/s2G2333k.pth"
+#gpt_path = "GPT_SoVITS/pretrained_models/gsv-v2final-pretrained/s1bert25hz-5kh-longer-epoch=12-step=369668.ckpt"
+
+#v4
+#sovits_path = "GPT_SoVITS/pretrained_models/gsv-v4-pretrained/s2Gv4.pth"
+#gpt_path = "GPT_SoVITS/pretrained_models/s1v3.ckpt"
+
 is_half_str = os.environ.get("is_half", "True")
 is_half = True if is_half_str.lower() == "true" else False
 is_share_str = os.environ.get("is_share", "False")
