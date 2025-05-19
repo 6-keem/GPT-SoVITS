@@ -1131,7 +1131,8 @@ if is_half:
 else:
     bert_model = bert_model.to(device)
     ssl_model = ssl_model.to(device)
-change_gpt_sovits_weights(gpt_path=gpt_path, sovits_path=sovits_path)
+if __name__ == "__main__":	
+    change_gpt_sovits_weights(gpt_path=gpt_path, sovits_path=sovits_path)
 
 
 # --------------------------------
