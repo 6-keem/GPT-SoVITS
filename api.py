@@ -271,13 +271,15 @@ def audio_sr(audio, sr):
 
 
 class Speaker:
-    def __init__(self, name, gpt, sovits, phones=None, bert=None, prompt=None):
+    def __init__(self, name, gpt, sovits, default_refer,phones=None, bert=None, prompt=None):
+    
         self.name = name
         self.sovits = sovits
         self.gpt = gpt
         self.phones = phones
         self.bert = bert
         self.prompt = prompt
+        self.default_refer = default_refer
 
 
 speaker_list = {}
@@ -949,23 +951,18 @@ def handle(
     inp_refs,
     sample_steps,
     if_sr,
+    spk="default"
 ):
-    if (
-        refer_wav_path == ""
-        or refer_wav_path is None
-        or prompt_text == ""
-        or prompt_text is None
-        or prompt_language == ""
-        or prompt_language is None
-    ):
+    spk_obj = speaker_list[spk]
+    if not refer_wav_path:
         refer_wav_path, prompt_text, prompt_language = (
-            default_refer.path,
-            default_refer.text,
-            default_refer.language,
+            spk_obj.default_refer.path,
+            spk_obj.default_refer.text,
+            spk_obj.default_refer.language
         )
-        if not default_refer.is_ready():
-            return JSONResponse({"code": 400, "message": "未指定参考音频且接口无预设"}, status_code=400)
-
+        if not spk_obj.default_refer.is_ready():
+            return JSONResponse({"code":400,"message":"No default refer for this speaker"}, status_code=400)
+   
     if sample_steps not in [4, 8, 16, 32]:
         sample_steps = 32
 
