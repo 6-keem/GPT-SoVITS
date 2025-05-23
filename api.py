@@ -176,9 +176,9 @@ import subprocess
 
 class DefaultRefer:
     def __init__(self, path, text, language):
-        self.path = args.default_refer_path
-        self.text = args.default_refer_text
-        self.language = args.default_refer_language
+        self.path = path
+        self.text = text
+        self.language = language
 
     def is_ready(self) -> bool:
         return is_full(self.path, self.text, self.language)
@@ -738,9 +738,6 @@ splits = {
 
 
 def get_tts_wav(
-    ref_wav_path,
-    prompt_text,
-    prompt_language,
     text,
     text_language,
     top_k=15,
@@ -752,6 +749,14 @@ def get_tts_wav(
     if_sr=False,
     spk="default",
 ):
+    spk_obj: DefaultRefer = speaker_list[spk].default_refer
+    if spk_obj is None:
+        raise Exception("DefaultRefer does not initialized")
+    
+    ref_wav_path = spk_obj.path
+    prompt_text = spk_obj.text
+    prompt_language = spk_obj.language
+
     infer_sovits = speaker_list[spk].sovits
     vq_model = infer_sovits.vq_model
     hps = infer_sovits.hps
