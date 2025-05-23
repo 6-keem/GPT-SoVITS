@@ -749,13 +749,22 @@ def get_tts_wav(
     if_sr=False,
     spk="default",
 ):
-    spk_obj: DefaultRefer = speaker_list[spk].default_refer
-    if spk_obj is None:
+    default_refer: DefaultRefer = speaker_list[spk].default_refer
+    if default_refer is None:
         raise Exception("DefaultRefer does not initialized")
     
-    ref_wav_path = spk_obj.path
-    prompt_text = spk_obj.text
-    prompt_language = spk_obj.language
+    if default_refer.language is None:
+        raise Exception("DefaultRefer's language was None")
+    
+    if default_refer.path is None:
+        raise Exception("DefaultRefer's path was None")
+    
+    if default_refer.text is None:
+        raise Exception("DefaultRefer's text was None")
+    
+    ref_wav_path = default_refer.path
+    prompt_text = default_refer.text
+    prompt_language = default_refer.language
 
     infer_sovits = speaker_list[spk].sovits
     vq_model = infer_sovits.vq_model
@@ -966,9 +975,6 @@ def handle_change(path, text, language):
 
 
 def handle(
-    refer_wav_path,
-    prompt_text,
-    prompt_language,
     text,
     text_language,
     cut_punc,
@@ -981,16 +987,6 @@ def handle(
     if_sr,
     spk="default"
 ):
-    spk_obj = speaker_list[spk]
-    if not refer_wav_path:
-        refer_wav_path, prompt_text, prompt_language = (
-            spk_obj.default_refer.path,
-            spk_obj.default_refer.text,
-            spk_obj.default_refer.language
-        )
-        if not spk_obj.default_refer.is_ready():
-            return JSONResponse({"code":400,"message":"No default refer for this speaker"}, status_code=400)
-   
     if sample_steps not in [4, 8, 16, 32]:
         sample_steps = 32
 
@@ -1001,9 +997,6 @@ def handle(
 
     return StreamingResponse(
         get_tts_wav(
-            refer_wav_path,
-            prompt_text,
-            prompt_language,
             text,
             text_language,
             top_k,
@@ -1231,9 +1224,7 @@ async def tts_endpoint(request: Request):
 
 @app.get("/")
 async def tts_endpoint(
-    refer_wav_path: str = None,
-    prompt_text: str = None,
-    prompt_language: str = None,
+    spk: str = "default",
     text: str = None,
     text_language: str = None,
     cut_punc: str = None,
@@ -1246,9 +1237,6 @@ async def tts_endpoint(
     if_sr: bool = False,
 ):
     return handle(
-        refer_wav_path,
-        prompt_text,
-        prompt_language,
         text,
         text_language,
         cut_punc,
@@ -1259,6 +1247,7 @@ async def tts_endpoint(
         inp_refs,
         sample_steps,
         if_sr,
+        spk=spk
     )
 
 
