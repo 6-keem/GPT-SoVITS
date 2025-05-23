@@ -316,6 +316,8 @@ def get_sovits_weights(sovits_path):
     if model_version == "v3":
         hps.model.version = "v3"
 
+    hps.model.version = "v3"
+
     model_params_dict = vars(hps.model)
     if model_version != "v3" :
         vq_model = SynthesizerTrn(
