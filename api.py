@@ -176,9 +176,9 @@ import subprocess
 
 class DefaultRefer:
     def __init__(self, path, text, language):
-        self.path = args.default_refer_path
-        self.text = args.default_refer_text
-        self.language = args.default_refer_language
+        self.path = path
+        self.text = text
+        self.language = language
 
     def is_ready(self) -> bool:
         return is_full(self.path, self.text, self.language)
@@ -271,13 +271,15 @@ def audio_sr(audio, sr):
 
 
 class Speaker:
-    def __init__(self, name, gpt, sovits, phones=None, bert=None, prompt=None):
+    def __init__(self, name, gpt, sovits, default_refer,phones=None, bert=None, prompt=None):
+    
         self.name = name
         self.sovits = sovits
         self.gpt = gpt
         self.phones = phones
         self.bert = bert
         self.prompt = prompt
+        self.default_refer = default_refer
 
 
 speaker_list = {}
@@ -315,7 +317,7 @@ def get_sovits_weights(sovits_path):
         hps.model.version = "v3"
 
     model_params_dict = vars(hps.model)
-    if model_version != "v3":
+    if model_version != "v3" :
         vq_model = SynthesizerTrn(
             hps.data.filter_length // 2 + 1,
             hps.train.segment_size // hps.data.hop_length,
@@ -342,22 +344,45 @@ def get_sovits_weights(sovits_path):
     else:
         vq_model = vq_model.to(device)
     vq_model.eval()
-    if if_lora_v3 == False:
-        vq_model.load_state_dict(dict_s2["weight"], strict=False)
-    else:
-        vq_model.load_state_dict(load_sovits_new(path_sovits_v3)["weight"], strict=False)
-        lora_rank = dict_s2["lora_rank"]
+    # if if_lora_v3 == False:
+    #     vq_model.load_state_dict(dict_s2["weight"], strict=False)
+    # else:
+    #     vq_model.load_state_dict(load_sovits_new(path_sovits_v3)["weight"], strict=False)
+    #     lora_rank = dict_s2["lora_rank"]
+    #     lora_config = LoraConfig(
+    #         target_modules=["to_k", "to_q", "to_v", "to_out.0"],
+    #         r=lora_rank,
+    #         lora_alpha=lora_rank,
+    #         init_lora_weights=True,
+    #     )
+    #     vq_model.cfm = get_peft_model(vq_model.cfm, lora_config)
+    #     vq_model.load_state_dict(dict_s2["weight"], strict=False)
+    #     vq_model.cfm = vq_model.cfm.merge_and_unload()
+    #     # torch.save(vq_model.state_dict(),"merge_win.pth")
+    #     vq_model.eval()
+
+    # LoRA 가중치는 cfm 모듈에만 적용. cfm이 없으면 그냥 weight만 로드
+    if hasattr(vq_model, "cfm") and if_lora_v3:
+        # 1) 기본 v3/v4 체크포인트 로드
+        base_ckpt = load_sovits_new(path_sovits_v3)["weight"]
+        vq_model.load_state_dict(base_ckpt, strict=False)
+
+        # 2) cfm을 PEFT-LoRA로 래핑
+        lora_rank   = dict_s2["lora_rank"]
         lora_config = LoraConfig(
-            target_modules=["to_k", "to_q", "to_v", "to_out.0"],
-            r=lora_rank,
-            lora_alpha=lora_rank,
-            init_lora_weights=True,
+            target_modules=["to_k","to_q","to_v","to_out.0"],
+            r=lora_rank, lora_alpha=lora_rank, init_lora_weights=True
         )
         vq_model.cfm = get_peft_model(vq_model.cfm, lora_config)
+
+        # 3) LoRA 가중치 로드 후 병합
         vq_model.load_state_dict(dict_s2["weight"], strict=False)
         vq_model.cfm = vq_model.cfm.merge_and_unload()
-        # torch.save(vq_model.state_dict(),"merge_win.pth")
         vq_model.eval()
+    else:
+        # v2 모델이거나 LoRA 미사용 시: 단순 weight 로드
+        vq_model.load_state_dict(dict_s2["weight"], strict=False)
+
 
     sovits = Sovits(vq_model, hps)
     return sovits
@@ -713,9 +738,6 @@ splits = {
 
 
 def get_tts_wav(
-    ref_wav_path,
-    prompt_text,
-    prompt_language,
     text,
     text_language,
     top_k=15,
@@ -727,6 +749,14 @@ def get_tts_wav(
     if_sr=False,
     spk="default",
 ):
+    spk_obj: DefaultRefer = speaker_list[spk].default_refer
+    if spk_obj is None:
+        raise Exception("DefaultRefer does not initialized")
+    
+    ref_wav_path = spk_obj.path
+    prompt_text = spk_obj.text
+    prompt_language = spk_obj.language
+
     infer_sovits = speaker_list[spk].sovits
     vq_model = infer_sovits.vq_model
     hps = infer_sovits.hps
@@ -949,23 +979,18 @@ def handle(
     inp_refs,
     sample_steps,
     if_sr,
+    spk="default"
 ):
-    if (
-        refer_wav_path == ""
-        or refer_wav_path is None
-        or prompt_text == ""
-        or prompt_text is None
-        or prompt_language == ""
-        or prompt_language is None
-    ):
+    spk_obj = speaker_list[spk]
+    if not refer_wav_path:
         refer_wav_path, prompt_text, prompt_language = (
-            default_refer.path,
-            default_refer.text,
-            default_refer.language,
+            spk_obj.default_refer.path,
+            spk_obj.default_refer.text,
+            spk_obj.default_refer.language
         )
-        if not default_refer.is_ready():
-            return JSONResponse({"code": 400, "message": "未指定参考音频且接口无预设"}, status_code=400)
-
+        if not spk_obj.default_refer.is_ready():
+            return JSONResponse({"code":400,"message":"No default refer for this speaker"}, status_code=400)
+   
     if sample_steps not in [4, 8, 16, 32]:
         sample_steps = 32
 
