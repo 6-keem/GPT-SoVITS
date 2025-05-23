@@ -317,7 +317,7 @@ def get_sovits_weights(sovits_path):
         hps.model.version = "v3"
 
     model_params_dict = vars(hps.model)
-    if model_version != "v3":
+    if model_version != "v3" :
         vq_model = SynthesizerTrn(
             hps.data.filter_length // 2 + 1,
             hps.train.segment_size // hps.data.hop_length,
@@ -344,22 +344,45 @@ def get_sovits_weights(sovits_path):
     else:
         vq_model = vq_model.to(device)
     vq_model.eval()
-    if if_lora_v3 == False:
-        vq_model.load_state_dict(dict_s2["weight"], strict=False)
-    else:
-        vq_model.load_state_dict(load_sovits_new(path_sovits_v3)["weight"], strict=False)
-        lora_rank = dict_s2["lora_rank"]
+    # if if_lora_v3 == False:
+    #     vq_model.load_state_dict(dict_s2["weight"], strict=False)
+    # else:
+    #     vq_model.load_state_dict(load_sovits_new(path_sovits_v3)["weight"], strict=False)
+    #     lora_rank = dict_s2["lora_rank"]
+    #     lora_config = LoraConfig(
+    #         target_modules=["to_k", "to_q", "to_v", "to_out.0"],
+    #         r=lora_rank,
+    #         lora_alpha=lora_rank,
+    #         init_lora_weights=True,
+    #     )
+    #     vq_model.cfm = get_peft_model(vq_model.cfm, lora_config)
+    #     vq_model.load_state_dict(dict_s2["weight"], strict=False)
+    #     vq_model.cfm = vq_model.cfm.merge_and_unload()
+    #     # torch.save(vq_model.state_dict(),"merge_win.pth")
+    #     vq_model.eval()
+
+    # LoRA 가중치는 cfm 모듈에만 적용. cfm이 없으면 그냥 weight만 로드
+    if hasattr(vq_model, "cfm") and if_lora_v3:
+        # 1) 기본 v3/v4 체크포인트 로드
+        base_ckpt = load_sovits_new(path_sovits_v3)["weight"]
+        vq_model.load_state_dict(base_ckpt, strict=False)
+
+        # 2) cfm을 PEFT-LoRA로 래핑
+        lora_rank   = dict_s2["lora_rank"]
         lora_config = LoraConfig(
-            target_modules=["to_k", "to_q", "to_v", "to_out.0"],
-            r=lora_rank,
-            lora_alpha=lora_rank,
-            init_lora_weights=True,
+            target_modules=["to_k","to_q","to_v","to_out.0"],
+            r=lora_rank, lora_alpha=lora_rank, init_lora_weights=True
         )
         vq_model.cfm = get_peft_model(vq_model.cfm, lora_config)
+
+        # 3) LoRA 가중치 로드 후 병합
         vq_model.load_state_dict(dict_s2["weight"], strict=False)
         vq_model.cfm = vq_model.cfm.merge_and_unload()
-        # torch.save(vq_model.state_dict(),"merge_win.pth")
         vq_model.eval()
+    else:
+        # v2 모델이거나 LoRA 미사용 시: 단순 weight 로드
+        vq_model.load_state_dict(dict_s2["weight"], strict=False)
+
 
     sovits = Sovits(vq_model, hps)
     return sovits
