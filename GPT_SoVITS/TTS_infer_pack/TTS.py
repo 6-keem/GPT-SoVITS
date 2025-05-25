@@ -249,8 +249,8 @@ class TTS_Config:
             "version": "v4",
             "t2s_weights_path": "GPT_SoVITS/pretrained_models/s1v3.ckpt",
             "vits_weights_path": "GPT_SoVITS/pretrained_models/gsv-v4-pretrained/s2Gv4.pth",
-            "cnhuhbert_base_path": "GPT_SoVITS/pretrained_models/chinese-hubert-base",
-            "bert_base_path": "GPT_SoVITS/pretrained_models/chinese-roberta-wwm-ext-large",
+            "cnhuhbert_base_path": "",
+            "bert_base_path": "",
         },
 
     }
