@@ -311,18 +311,32 @@ class TTS_Config:
 
         self.use_vocoder: bool = False
 
+
+        if self.bert_base_path and os.path.exists(self.bert_base_path):
+            pass
+        else:
+            print("No custom BERT path set, skipping BERT")
+            self.bert_base_path = None
+
+        if self.cnhuhbert_base_path and os.path.exists(self.cnhuhbert_base_path):
+            pass
+        else:
+            print("No custom CNHuBERT path set, skipping CNHuBERT")
+            self.cnhuhbert_base_path = None
+
+
         if (self.t2s_weights_path in [None, ""]) or (not os.path.exists(self.t2s_weights_path)):
             self.t2s_weights_path = self.default_configs[version]["t2s_weights_path"]
             print(f"fall back to default t2s_weights_path: {self.t2s_weights_path}")
         if (self.vits_weights_path in [None, ""]) or (not os.path.exists(self.vits_weights_path)):
             self.vits_weights_path = self.default_configs[version]["vits_weights_path"]
             print(f"fall back to default vits_weights_path: {self.vits_weights_path}")
-        if (self.bert_base_path in [None, ""]) or (not os.path.exists(self.bert_base_path)):
-            self.bert_base_path = self.default_configs[version]["bert_base_path"]
-            print(f"fall back to default bert_base_path: {self.bert_base_path}")
-        if (self.cnhuhbert_base_path in [None, ""]) or (not os.path.exists(self.cnhuhbert_base_path)):
-            self.cnhuhbert_base_path = self.default_configs[version]["cnhuhbert_base_path"]
-            print(f"fall back to default cnhuhbert_base_path: {self.cnhuhbert_base_path}")
+        # if (self.bert_base_path in [None, ""]) or (not os.path.exists(self.bert_base_path)):
+        #     self.bert_base_path = self.default_configs[version]["bert_base_path"]
+        #     print(f"fall back to default bert_base_path: {self.bert_base_path}")
+        # if (self.cnhuhbert_base_path in [None, ""]) or (not os.path.exists(self.cnhuhbert_base_path)):
+        #     self.cnhuhbert_base_path = self.default_configs[version]["cnhuhbert_base_path"]
+        #     print(f"fall back to default cnhuhbert_base_path: {self.cnhuhbert_base_path}")
         self.update_configs()
 
         self.max_sec = None
@@ -446,6 +460,8 @@ class TTS:
         # self.enable_half_precision(self.configs.is_half)
 
     def init_cnhuhbert_weights(self, base_path: str):
+        if not base_path:
+            return
         print(f"Loading CNHuBERT weights from {base_path}")
         self.cnhuhbert_model = CNHubert(base_path)
         self.cnhuhbert_model = self.cnhuhbert_model.eval()
@@ -454,6 +470,8 @@ class TTS:
             self.cnhuhbert_model = self.cnhuhbert_model.half()
 
     def init_bert_weights(self, base_path: str):
+        if not base_path:
+            return
         print(f"Loading BERT weights from {base_path}")
         self.bert_tokenizer = AutoTokenizer.from_pretrained(base_path)
         self.bert_model = AutoModelForMaskedLM.from_pretrained(base_path)
