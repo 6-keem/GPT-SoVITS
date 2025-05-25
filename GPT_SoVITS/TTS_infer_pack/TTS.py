@@ -460,8 +460,7 @@ class TTS:
         # self.enable_half_precision(self.configs.is_half)
 
     def init_cnhuhbert_weights(self, base_path: str):
-        if not base_path:
-            return
+        return
         print(f"Loading CNHuBERT weights from {base_path}")
         self.cnhuhbert_model = CNHubert(base_path)
         self.cnhuhbert_model = self.cnhuhbert_model.eval()
@@ -470,8 +469,7 @@ class TTS:
             self.cnhuhbert_model = self.cnhuhbert_model.half()
 
     def init_bert_weights(self, base_path: str):
-        if not base_path:
-            return
+        return 
         print(f"Loading BERT weights from {base_path}")
         self.bert_tokenizer = AutoTokenizer.from_pretrained(base_path)
         self.bert_model = AutoModelForMaskedLM.from_pretrained(base_path)
